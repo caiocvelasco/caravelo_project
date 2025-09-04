@@ -1,0 +1,26 @@
+# This file contains the connection details for your data platform.
+# Typically, you would have one profile for each warehouse you use.
+# However, dbt supports multiple targets within one profile to encourage the use of separate dev/prod environments.
+
+### dbt_transformation ###
+# References (dbt-snowflake):
+#   [0] https://docs.getdbt.com/docs/core/connect-data-platform/snowflake-setup
+#   [3] https://docs.getdbt.com/docs/core/dbt-core-environments
+#   [4] https://docs.getdbt.com/docs/running-a-dbt-project/using-threads
+#   [5] https://docs.getdbt.com/reference/dbt-jinja-functions/env_var
+
+
+caravelo_snowflake:  # Check: https://github.com/dbt-labs/jaffle-shop-mesh-platform/blob/main/profiles.yml
+  target: dev
+  outputs:
+    dev:
+      type: snowflake # [0]
+      account:   "{{ env_var('SNOWFLAKE_ACCOUNT') }}"    # [5]
+      user:      "{{ env_var('SNOWFLAKE_USER') }}"       # [5]
+      password:  "{{ env_var('SNOWFLAKE_PASSWORD') }}"   # [5]
+      role:      "{{ env_var('SNOWFLAKE_ROLE') }}"
+      database:  "{{ env_var('SNOWFLAKE_DATABASE') }}"   # [5]
+      warehouse: "{{ env_var('SNOWFLAKE_WAREHOUSE') }}"  # [5]       # [5]
+      host:      "{{ env_var('SNOWFLAKE_HOST') }}"       # [5]
+      schema: dev_dbt_your_user # [3] Default schema for this target. It will be overridden by the 'schema:' in the 'models:' section of dbt_project.yml
+      threads: 8 # [4]

@@ -1,0 +1,6 @@
+packages:
+  - package: dbt-labs/dbt_utils # will be used to reference the path (data/raw) to the CSV files
+    version: 1.2.0 # this is the compatible version with dbt-core`s 1.8.3 version (the one I installed) - check: https://hub.getdbt.com/dbt-labs/dbt_utils/latest/
+  
+  - package: dbt-labs/dbt_external_tables  # https://github.com/dbt-labs/dbt-external-tables/tree/0.9.0/
+    version: 0.9.0                         # This macro assumes you have already create an External Stage in Snowflake

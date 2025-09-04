@@ -1,0 +1,31 @@
+version: 2
+
+models:
+  - name: scd_2_customers
+    description: "SCD Type 2 - Customers"
+    columns:
+      - name: customer_id
+        description: "Unique identifier for each customer"
+        data_tests:
+          - unique
+          - not_null
+      - name: name
+        description: "Name of the customer"
+      - name: age
+        description: "Age of the customer"
+      - name: gender
+        description: "Gender of the customer"
+      - name: signup_date
+        description: "Signup date of the customer"
+      - name: subscription_id
+        description: "Unique identifier for each subscription"
+      - name: subscription_type
+        description: "Type of the subscription"
+      - name: start_date
+        description: "Start date of the subscription"
+      - name: end_date
+        description: "End date of the subscription"
+      - name: is_churned
+        description: "Indicates whether the customer has churned (1 for churned, 0 for not churned)"
+        data_tests:
+          - not_null

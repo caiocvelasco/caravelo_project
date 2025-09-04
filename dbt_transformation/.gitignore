@@ -1,0 +1,14 @@
+# Ignore Python bytecode files
+*.pyc
+__pycache__
+
+# Ignore .env files
+.env
+
+# Ignore CSV files
+data/
+
+# Ignore dbt files
+target/
+dbt_packages/
+logs/
