@@ -30,3 +30,74 @@ models:
       - name: source_system
         description: "Originating system (Amadeus / Sabre / Vueling)."
         tests: [not_null]
+  - name: dim_client
+    description: "Client dimension (from JSON config)."
+    columns:
+      - name: client_code
+        description: "Tenant code."
+        tests: [not_null, unique]
+      - name: client_name
+        description: "Display name."
+      - name: reporting_timezone
+        description: "IANA timezone for recognition logic."
+        tests: [not_null]
+      - name: reporting_currency
+        description: "Client’s base reporting currency."
+        tests: [not_null]
+  - name: fct_mrr_alloc
+    description: >
+      Monthly-recognized subscription revenue normalized to a monthly basis, per
+      client × subscription × recognition_month. Includes native, EUR, and client reporting currency.
+    columns:
+      - name: client_code
+        description: "Tenant code (FK to dim_client)."
+        tests:
+          - not_null
+      - name: subscription_id
+        description: "Subscription identifier."
+        tests: [not_null]
+      - name: recognition_month
+        description: "Month to which revenue is recognized (client timezone)."
+        tests: [not_null]
+      - name: billing_period
+        description: "MONTHLY / QUARTERLY / ANNUAL."
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["MONTHLY","QUARTERLY","ANNUAL"]
+      - name: currency_native
+        description: "Original currency of the charge."
+        tests: [not_null]
+      - name: mrr_native
+        description: "Monthly-recognized amount in native currency."
+        tests: [not_null]
+      - name: mrr_eur
+        description: "Monthly MRR converted to EUR using monthly FX."
+        tests: [not_null]
+      - name: mrr_reporting_currency
+        description: "Monthly MRR in client's base reporting currency."
+      - name: eur_per_unit_native
+        description: "EUR per 1 unit of native currency (FX used)."
+      - name: eur_per_unit_reporting
+        description: "EUR per 1 unit of reporting currency (FX used)."
+  - name: mart_customer__mrr_monthly
+    description: "Customer-facing monthly MRR by client in their reporting currency."
+    columns:
+      - name: client_code
+        description: "Tenant code."
+        tests: [not_null]
+      - name: recognition_month
+        description: "Recognized month."
+        tests: [not_null]
+      - name: mrr_reporting_currency
+        description: "Aggregated MRR in client's reporting currency."
+  - name: mart_internal__mrr_monthly_eur
+    description: "Internal consolidated monthly MRR in EUR."
+    columns:
+      - name: recognition_month
+        description: "Recognized month."
+        tests: [not_null]
+      - name: mrr_eur
+        description: "Aggregated MRR in EUR."
+

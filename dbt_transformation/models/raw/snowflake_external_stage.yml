@@ -35,4 +35,25 @@ sources:
       location: "@{{ env_var('SNOWFLAKE_DATABASE') }}.{{ env_var('SNOWFLAKE_SCHEMA_RAW') }}.{{ env_var('S3_JSON_STAGE') }}/vueling" # reference a FOLDER in S3 where the csv is located (it will appear in the 'Location' parameter in the 'csv' tables in Snowflake)
       file_format: "{{ env_var('SNOWFLAKE_DATABASE') }}.{{ env_var('SNOWFLAKE_SCHEMA_RAW') }}.{{ env_var('S3_JSON_FILE_FORMAT') }}"
       #infer_schema: true   # Maps the JSON's 'key:value' pair to the correct columns
-      # auto_refresh: true # this will work if an SNS event in S3 happens when a new csv arrives in S3 # [2]   
+      # auto_refresh: true # this will work if an SNS event in S3 happens when a new csv arrives in S3 # [2]
+  - name: subscription_events_raw_dbt
+    ext_full_refresh: true
+    description: "External table - Subscription renewal events (JSONL)"
+    external:
+      location: "@{{ env_var('SNOWFLAKE_DATABASE') }}.{{ env_var('SNOWFLAKE_SCHEMA_RAW') }}.{{ env_var('S3_JSON_STAGE') }}/mrr/events"
+      file_format: "{{ env_var('SNOWFLAKE_DATABASE') }}.{{ env_var('SNOWFLAKE_SCHEMA_RAW') }}.{{ env_var('S3_JSON_FILE_FORMAT') }}"
+      # pattern: '.*\\.jsonl'   # optional, if you want to only pick .jsonl
+  - name: fx_rates_raw_dbt
+    ext_full_refresh: true
+    description: "External table - FX rates (JSONL, eur_per_unit)"
+    external:
+      location: "@{{ env_var('SNOWFLAKE_DATABASE') }}.{{ env_var('SNOWFLAKE_SCHEMA_RAW') }}.{{ env_var('S3_JSON_STAGE') }}/mrr/fx"
+      file_format: "{{ env_var('SNOWFLAKE_DATABASE') }}.{{ env_var('SNOWFLAKE_SCHEMA_RAW') }}.{{ env_var('S3_JSON_FILE_FORMAT') }}"
+      # pattern: '.*\\.jsonl'
+  - name: clients_config_raw_dbt
+    ext_full_refresh: true
+    description: "External table - Client reporting configuration (JSONL: timezone, base currency)"
+    external:
+      location: "@{{ env_var('SNOWFLAKE_DATABASE') }}.{{ env_var('SNOWFLAKE_SCHEMA_RAW') }}.{{ env_var('S3_JSON_STAGE') }}/mrr/clients"
+      file_format: "{{ env_var('SNOWFLAKE_DATABASE') }}.{{ env_var('SNOWFLAKE_SCHEMA_RAW') }}.{{ env_var('S3_JSON_FILE_FORMAT') }}"
+      # pattern: '.*\\.jsonl'

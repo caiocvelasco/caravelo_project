@@ -45,3 +45,95 @@ models:
         tests: [not_null]
       - name: loaded_at
         description: "ETL load timestamp"
+  - name: stg_clients
+    description: "Client configuration from JSONL (reporting timezone and base reporting currency)."
+    columns:
+      - name: client_code
+        description: "Client/tenant short code (e.g., Y4, F3, EU)."
+        tests: [not_null, unique]
+      - name: client_name
+        description: "Display name."
+      - name: reporting_timezone
+        description: "IANA timezone for recognition logic (e.g., Europe/Madrid)."
+        tests: [not_null]
+      - name: reporting_currency
+        description: "Client’s base reporting currency (e.g., EUR, MXN)."
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["EUR","USD","GBP","MXN","SAR"]
+  - name: stg_fx_rates
+    description: "Daily FX rates JSONL with `eur_per_unit` (EUR per 1 unit of currency)."
+    columns:
+      - name: rate_date
+        description: "Date of the FX rate."
+        tests: [not_null]
+      - name: currency
+        description: "Currency code (ISO)."
+        tests: [not_null]
+      - name: eur_per_unit
+        description: "EUR per unit of the currency (e.g., if USD→0.92, then 1 USD = 0.92 EUR)."
+        tests: [not_null]
+  - name: stg_fx_rates_monthly
+    description: "One FX rate per currency per month (last available within the month)."
+    columns:
+      - name: fx_month
+        description: "Month bucket used for MRR recognition."
+        tests: [not_null]
+      - name: currency
+        description: "Currency code."
+        tests: [not_null]
+      - name: eur_per_unit
+        description: "EUR per unit for that month/currency."
+        tests: [not_null]
+  - name: stg_subscription_events
+    description: >
+      Subscription renewal events (success/failure) from JSONL.
+      Timestamps parsed; amounts typed; optional `billingPeriod` hint preserved.
+    columns:
+      - name: event_id
+        description: "Event id (used for idempotency/dedupe)."
+        tests: [not_null, unique]
+      - name: event_name
+        description: "Event type (SubscriptionRenewedEvent / SubscriptionRenewalFailedEvent)."
+        tests:
+          - accepted_values:
+              arguments:
+                values: ["SubscriptionRenewedEvent","SubscriptionRenewalFailedEvent"]
+      - name: is_success
+        description: "Boolean derived from 'success' field."
+        tests: [not_null]
+      - name: client_code
+        description: "Tenant code."
+        tests: [not_null]
+      - name: subscription_id
+        description: "Subscription identifier."
+        tests: [not_null]
+      - name: invoice_id
+        description: "Invoice identifier (may repeat across retries)."
+      - name: currency_native
+        description: "Native currency of the transaction."
+        tests: [not_null]
+      - name: amount_native
+        description: "Transaction amount in native currency."
+        tests: [not_null]
+      - name: event_ts_utc
+        description: "Event timestamp parsed as UTC."
+        tests: [not_null]
+      - name: invoice_date
+        description: "Invoice date (YYYY-MM-DD)."
+      - name: paid_from_date
+        description: "Coverage start per payment (fallback 1)."
+      - name: quota_from_date
+        description: "Coverage start per quota (primary for recognition)."
+      - name: quota_to_date
+        description: "Coverage end per quota."
+      - name: billing_period_hint
+        description: "Optional hint (MONTHLY/QUARTERLY/ANNUAL)."
+      - name: base_product
+        description: "Product or plan code."
+      - name: phase
+        description: "Phase (e.g., EVERGREEN)."
+      - name: hub
+        description: "Client/hub marker."

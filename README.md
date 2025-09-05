@@ -13,14 +13,14 @@
 
 ## Project Structure
 
-- **dbt_2_transformation (project-root)/**
-    - **.venv/**
+- **caravelo_project (project-root)/**
     - **dbt_transformation/**   (This is where your dbt project lives)
-    - **img/**
-    - **logs/**
-    - **.env**
+    - **docs/**                 (dbt documentation output)
+    - **img/**                  (Project images and diagrams)
+    - **initial_setup/**        (AWS IAM, Snowflake setup scripts)
+    - **part_1_2_3/**           (Analysis documentation)
+    - **.env**                  (Environment variables - ignored by git)
     - **.gitignore**
-    - **.python-version**
     - **requirements.txt**
     - **README.md**
 
@@ -66,28 +66,34 @@ The .gitignore file, ignores the `.env` file for security reasons. However, sinc
 
 Create a `.env` file in the project root with the following content:
 
-S3_REGION=YOUR_REGION
-S3_BUCKET_NAME=YOUR_BUCKET_NAME                            
-S3_SNOWFLAKE_STORAGE_INTEGRATION=MY_S3_INTEGRATION
-S3_SNOWFLAKE_STAGE=MY_S3_STAGE
-S3_SNOWFLAKE_FILE_FORMAT=MY_PARQUET_FORMAT
-S3_SNOWFLAKE_IAM_ROLE_ARN=arn:aws:iam::YOUR_ROLE:role/mysnowflakerole
-SNOWFLAKE_HOST=YOUR_HOST.YOUR_REGION.aws.snowflakecomputing.com
-SNOWFLAKE_PORT=443 
-SNOWFLAKE_USER=YOUR_USER
-SNOWFLAKE_ROLE=STORAGE_ADMIN
-SNOWFLAKE_PASSWORD=YOUR_PASSWORD
-SNOWFLAKE_DBT_USER=DBT_USER
-SNOWFLAKE_DBT_ROLE=DBT_ROLE
+# Snowflake Connection Details
 SNOWFLAKE_ACCOUNT=YOUR_ACCOUNT
-SNOWFLAKE_ACCOUNT_URL=https://YOUR_HOST.YOUR_REGION.aws.snowflakecomputing.com
-SNOWFLAKE_WAREHOUSE=MY_DBT_WAREHOUSE
-SNOWFLAKE_DATABASE=MY_DBT_DATABASE
-SNOWFLAKE_SCHEMA_BRONZE=bronze
+SNOWFLAKE_USER=YOUR_USER
+SNOWFLAKE_PASSWORD=YOUR_PASSWORD
+SNOWFLAKE_ROLE=YOUR_ROLE
+SNOWFLAKE_WAREHOUSE=YOUR_WAREHOUSE
+SNOWFLAKE_DATABASE=YOUR_DATABASE
+
+# Snowflake Schema Configuration
+SNOWFLAKE_SCHEMA_RAW=raw
+SNOWFLAKE_SCHEMA_STAGING=staging
+SNOWFLAKE_SCHEMA_ANALYTICS=analytics
+
+# S3 Configuration
+S3_CSV_STAGE=YOUR_CSV_STAGE_NAME
+S3_JSON_STAGE=YOUR_JSON_STAGE_NAME
+S3_CSV_FILE_FORMAT=YOUR_CSV_FILE_FORMAT
+S3_JSON_FILE_FORMAT=YOUR_JSON_FILE_FORMAT
+
+# AWS Configuration (if needed)
+S3_REGION=YOUR_REGION
+S3_BUCKET_NAME=YOUR_BUCKET_NAME
+S3_SNOWFLAKE_STORAGE_INTEGRATION=YOUR_STORAGE_INTEGRATION
+S3_SNOWFLAKE_IAM_ROLE_ARN=arn:aws:iam::YOUR_ROLE:role/mysnowflakerole
 
 If you want to check the environment variables from your current folder, do:
 * printenv (this will show if the environmental variables were loaded within the Docker container)
-* printenv | grep SNOWFLAKE (this functions as a filter to show only the variables that contain 'POSTGRES')
+* printenv | grep SNOWFLAKE (this functions as a filter to show only the variables that contain 'SNOWFLAKE')
 
 ### Initiate the Environment
 

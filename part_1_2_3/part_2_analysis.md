@@ -1,4 +1,4 @@
-# Part 2 — Catalog Version Management & Analytics Integration
+# Part 2 - Catalog Version Management & Analytics Integration
 
 This document shows how to design a **lean, interview-ready solution** for catalog version tracking and analytics integration.  
 We use **S3 + Snowflake + dbt** to simulate end-to-end change detection, version storage, and reporting.

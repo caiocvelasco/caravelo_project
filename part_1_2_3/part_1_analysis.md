@@ -1,4 +1,4 @@
-# Part 1: Data Architecture Analysis - 3-Layer dbt Transformation Pipeline
+# Part 1 - Airline booking modeling
 
 ## 📊 Interactive dbt Documentation
 
@@ -12,6 +12,44 @@ The complete dbt project documentation is available online, featuring:
 - **Dependency Graph**: Clear visualization of model relationships
 
 *Click the link above to explore the full technical documentation and data lineage.*
+
+---
+
+## Source Data Structure & PDF Mapping
+
+### Overview
+The three source files (`amadeus_pss_bookings.csv`, `sabre_pss_bookings.csv`, `vueling_api_bookings.json`) were designed to mimic real Passenger Service System (PSS) outputs, with field names and structures directly inspired by the five provided PDF samples.
+
+### Key Design Principle: Bookings vs. Passengers
+A single booking (PNR/Record Locator) can contain multiple passengers. The source systems represent this relationship differently:
+- **PSS Systems (Amadeus/Sabre)**: One row per passenger, with booking info repeated
+- **API Systems (Vueling)**: Nested structure with passenger arrays
+
+### Source File Characteristics
+
+| Source File | Format | Passenger Relationship | Inspired By | Key Fields |
+|-------------|--------|----------------------|-------------|------------|
+| **Amadeus PSS** | CSV | One row per passenger | WestJet & Qatar PDFs | `Record_Locator`, `Pax_Name`, `Fare_Basis`, `Booking_Sts` |
+| **Sabre PSS** | CSV | One row per passenger | LATAM & Ryanair PDFs | `PNR`, `Passenger_Name`, `Class`, `TicketNumber` |
+| **Vueling API** | JSON | Nested passenger arrays | Vueling PDF | `booking_reference`, `passengers[]`, `flights[]`, `price` |
+
+### PDF Sample Evidence
+The source files directly abstract real-world elements from the provided PDFs:
+- **Fare Basis** and **Booking Status** from WestJet/Qatar receipts
+- **PNR** and **Passenger Names** from LATAM boarding passes  
+- **Nested passengers** structure from Vueling receipt
+
+This ensures the synthetic data reflects actual airline data flow variations across different system types.
+
+### Field Mapping Examples
+Key fields demonstrate how real PDF elements were abstracted into the source files:
+
+| Field in Source File | PDF Evidence | Purpose |
+|---------------------|--------------|---------|
+| `PNR` / `Record_Locator` | "Referencia HQIR7N" (Ryanair), "Booking ref: 1A/SAFPFF" (Qatar) | Different naming conventions for booking reference |
+| `Fare_Basis` | "Fare Basis KO7D02EK" (WestJet), "Fare basis: VJR3R1SQ" (Qatar) | Critical revenue accounting data from PSS |
+| `Booking_Sts` / `Status` | "Booking Status OK TO FLY" (WestJet), "Booking status: OK" (Qatar) | Operational state of booking segment |
+| `passengers[]` array | "Pasajeros: Indiana Jones, Lindi Jones" (Vueling) | Hierarchical booking-passenger relationship |
 
 ---
 
@@ -70,20 +108,20 @@ This table shows how key fields from Amadeus (CSV), Sabre (CSV), and Vueling (JS
 
 | Target Field      | Amadeus (CSV)         | Sabre (CSV)            | Vueling (JSON)         | Notes |
 |-------------------|-----------------------|-------------------------|-------------------------|-------|
-| `booking_id`      | `Record_Locator`      | `PNR`                  | `booking_reference`     | All represent the PNR / booking reference, though with different naming. |
-| `booking_created_at` | `Creation_Date`   | `Create_Date_UTC`       | `created_at`            | Normalized to UTC timestamp. |
-| `passenger_name`  | `Pax_Name`            | `Passenger_Name`        | `passengers[].name`     | Flattened for Vueling (array of passengers). |
-| `passenger_type`  | `Pax_Type`            | _(not available)_       | `passengers[].type`     | Null when not provided by source. |
-| `origin`          | `Dep_Stn`             | `Origin`                | `flights[].origin`      | Always IATA 3-letter airport code. |
-| `destination`     | `Arr_Stn`             | `Destination`           | `flights[].destination` | Always IATA 3-letter airport code. |
-| `flight_number`   | `Flight_Num`          | `Flight_Number`         | `flights[].flight_number` | Standardized flight number format. |
-| `departure_date`  | `Dep_Date`            | `DepartureDate`         | `flights[].departure_date` | Cast to DATE type. |
-| `status`          | `Booking_Sts`         | `Status`                | _(not available)_       | Null for Vueling API, since it doesn’t expose booking status. |
-| `fare_basis`      | `Fare_Basis`          | _(not available)_       | _(not available)_       | Available only in Amadeus. |
-| `ticket_number`   | `Tkt_Number`          | `TicketNumber`          | _(not available)_       | E-ticket number, not always exposed. |
-| `class`           | _(not available)_     | `Class`                 | _(not available)_       | Cabin class code. |
-| `currency`        | _(not available)_     | _(not available)_       | `price.currency`        | Available only in Vueling. |
-| `price_total`     | _(not available)_     | _(not available)_       | `price.total`           | Available only in Vueling. |
+| `booking_id`      | `record_locator`      | `pnr`                  | `booking_reference`     | All represent the PNR / booking reference, though with different naming. |
+| `booking_created_at` | `creation_date`   | `create_date_utc`       | `creation_date`         | Normalized to UTC timestamp. |
+| `passenger_name`  | `pax_name`            | `passenger_name`        | `pax_name`              | Flattened for Vueling (array of passengers). |
+| `passenger_type`  | `pax_type`            | _(not available)_       | `pax_type`              | Null when not provided by source. |
+| `origin`          | `dep_stn`             | `origin`                | `dep_stn`               | Always IATA 3-letter airport code. |
+| `destination`     | `arr_stn`             | `destination`           | `arr_stn`               | Always IATA 3-letter airport code. |
+| `flight_number`   | `flight_num`          | `flight_number`         | `flight_num`            | Standardized flight number format. |
+| `departure_date`  | `dep_date`            | `departuredate`         | `dep_date`              | Cast to DATE type. |
+| `status`          | `booking_sts`         | `status`                | _(not available)_       | Null for Vueling API, since it doesn't expose booking status. |
+| `fare_basis`      | `fare_basis`          | _(not available)_       | _(not available)_       | Available only in Amadeus. |
+| `ticket_number`   | `tkt_number`          | `ticketnumber`          | _(not available)_       | E-ticket number, not always exposed. |
+| `class`           | _(not available)_     | `class`                 | _(not available)_       | Cabin class code. |
+| `currency`        | _(not available)_     | _(not available)_       | `currency`              | Available only in Vueling. |
+| `price_total`     | _(not available)_     | _(not available)_       | `price_total`           | Available only in Vueling. |
 | `source_system`   | `'Amadeus'`           | `'Sabre'`               | `'Vueling'`             | Added for lineage and debugging. |
 | `loaded_at`       | `CURRENT_TIMESTAMP`   | `CURRENT_TIMESTAMP`     | `CURRENT_TIMESTAMP`     | Technical metadata (ETL audit). |
 
@@ -105,9 +143,9 @@ This analysis documents the implementation of a robust 3-layer data architecture
 ```
 S3 Raw Sources: Amadeus CSV / Sabre CSV / Vueling JSON 
     ↓ (External Tables in Snowflake RAW)
-RAW Helper Views: amadeus_flat / sabre_flat / vueling_flat
+RAW Helper Views: amadeus_flat_dbt / sabre_flat_dbt / vueling_flat_dbt
     ↓ (dbt transformations)
-STAGING.STG.BOOKINGS: Unified Canonical Model - Cleaned & normalized data
+STAGING.STG_BOOKINGS: Unified Canonical Model - Cleaned & normalized data
     ↓ (dbt transformations)
 ANALYTICS Layer:
 ├── DIM_BOOKINGS: Master dimension table (one record per booking)
@@ -141,9 +179,9 @@ The STAGING layer unifies three different data formats into a consistent **passe
 ```sql
 -- Unified staging model structure
 SELECT
-    source_system, booking_reference, origin, destination,
-    passenger_name, passenger_type, segment_number, flight_date
-FROM {{ source('raw', 'amadeus_raw_dbt') }}
+    source_system, booking_id, origin, destination,
+    passenger_name, passenger_type, flight_number, departure_date
+FROM {{ ref('amadeus_flat_dbt') }}
 UNION ALL
 -- Additional sources with same schema
 ```
@@ -165,9 +203,9 @@ SELECT
     booking_id,                    -- Natural key (PNR/Record Locator)
     source_system,                 -- Source system identifier
     MD5(source_system || '|' || booking_id) AS booking_sk,  -- Surrogate key
-    booking_created_at,            -- Earliest creation timestamp
-    any_origin,                    -- Sample origin for BI labels
-    any_destination               -- Sample destination for BI labels
+    MIN(booking_created_at) AS booking_created_at,  -- Earliest creation timestamp
+    ANY_VALUE(origin) AS any_origin,       -- Sample origin for BI labels
+    ANY_VALUE(destination) AS any_destination -- Sample destination for BI labels
 FROM {{ ref('stg_bookings') }}
 GROUP BY booking_id, source_system
 ```
@@ -229,9 +267,9 @@ This demonstrates successful normalization across different booking systems into
 ### dbt Project Structure
 ```
 dbt_transformation/
-├── models/raw/        # External table definitions
-├── models/staging/    # Normalized data models  
-├── models/analytics/  # Business views & dimensions
+├── models/raw/        # External table definitions (amadeus_flat_dbt, sabre_flat_dbt, vueling_flat_dbt)
+├── models/staging/    # Normalized data models (stg_bookings, stg_clients, stg_fx_rates, etc.)
+├── models/analytics/  # Business views & dimensions (dim_bookings, vw_bookings_summary, etc.)
 ├── macros/            # Reusable SQL functions
 └── tests/             # Data quality validation
 ```
@@ -280,7 +318,3 @@ This 3-layer dbt architecture demonstrates modern data engineering best practice
 **Business Value**: Actionable insights from unified, clean data  
 
 The pipeline successfully normalizes complex airline booking data from three different systems into a consistent schema, delivering business-ready analytics views with full data lineage and quality assurance.
-
----
-
-*This analysis showcases effective data engineering practices using dbt, Snowflake, and S3, delivering tangible business value through unified, clean, and actionable data.*
