@@ -1,0 +1,38 @@
+# Defines external sources and their locations within your data warehouse.
+# Reference: 
+# [1] https://github.com/dbt-labs/dbt-external-tables/blob/main/sample_sources/snowflake.yml
+# [2] https://docs.snowflake.com/en/user-guide/tables-external-auto
+
+version: 2
+
+sources:
+- name: raw  # This is the name that will be used as reference in the dbt models. It will be created in Snowflake if it does not exists.     
+  description: "External, as-is Snowflake external tables over S3"
+  database: "{{ env_var('SNOWFLAKE_DATABASE') }}"
+  schema: "{{ env_var('SNOWFLAKE_SCHEMA_RAW') }}"  # Specifies the external schema where the sources reside
+  loader: S3
+  tables:
+  - name: amadeus_raw_dbt
+    ext_full_refresh: true
+    description: "External table - Amadeus CSV"
+    external:   # Here, we will point to the stage (which is assumed to be created in Snowflake) and we will create the External Tables
+      location: "@{{ env_var('SNOWFLAKE_DATABASE') }}.{{ env_var('SNOWFLAKE_SCHEMA_RAW') }}.{{ env_var('S3_CSV_STAGE') }}/amadeus" # reference a FOLDER in S3 where the csv is located (it will appear in the 'Location' parameter in the 'csv' tables in Snowflake)
+      file_format: "{{ env_var('SNOWFLAKE_DATABASE') }}.{{ env_var('SNOWFLAKE_SCHEMA_RAW') }}.{{ env_var('S3_CSV_FILE_FORMAT') }}"
+      #infer_schema: true   # Maps the JSON's 'key:value' pair to the correct columns
+      # auto_refresh: true # this will work if an SNS event in S3 happens when a new csv arrives in S3 # [2]
+  - name: sabre_raw_dbt
+    ext_full_refresh: true
+    description: "External table - Sabre CSV"
+    external:   # Here, we will point to the stage (which is assumed to be created in Snowflake) and we will create the External Tables
+      location: "@{{ env_var('SNOWFLAKE_DATABASE') }}.{{ env_var('SNOWFLAKE_SCHEMA_RAW') }}.{{ env_var('S3_CSV_STAGE') }}/sabre" # reference a FOLDER in S3 where the csv is located (it will appear in the 'Location' parameter in the 'csv' tables in Snowflake)
+      file_format: "{{ env_var('SNOWFLAKE_DATABASE') }}.{{ env_var('SNOWFLAKE_SCHEMA_RAW') }}.{{ env_var('S3_CSV_FILE_FORMAT') }}"
+      #infer_schema: true   # Maps the JSON's 'key:value' pair to the correct columns
+      # auto_refresh: true # this will work if an SNS event in S3 happens when a new csv arrives in S3 # [2]   
+  - name: vueling_raw_dbt
+    ext_full_refresh: true
+    description: "External table - Vueling JSON"
+    external:   # Here, we will point to the stage (which is assumed to be created in Snowflake) and we will create the External Tables
+      location: "@{{ env_var('SNOWFLAKE_DATABASE') }}.{{ env_var('SNOWFLAKE_SCHEMA_RAW') }}.{{ env_var('S3_JSON_STAGE') }}/vueling" # reference a FOLDER in S3 where the csv is located (it will appear in the 'Location' parameter in the 'csv' tables in Snowflake)
+      file_format: "{{ env_var('SNOWFLAKE_DATABASE') }}.{{ env_var('SNOWFLAKE_SCHEMA_RAW') }}.{{ env_var('S3_JSON_FILE_FORMAT') }}"
+      #infer_schema: true   # Maps the JSON's 'key:value' pair to the correct columns
+      # auto_refresh: true # this will work if an SNS event in S3 happens when a new csv arrives in S3 # [2]   

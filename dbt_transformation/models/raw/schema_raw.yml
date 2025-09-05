@@ -1,0 +1,78 @@
+version: 2
+
+models:
+  - name: amadeus_flat_dbt
+    description: "Helper view: parses Amadeus CSV row into columns (RAW zone, still source-faithful)"
+    columns:
+      - name: record_locator
+        description: "PNR / Record Locator"
+      - name: creation_date
+        description: "Booking creation timestamp (source timezone/format)"
+      - name: pax_type
+        description: "Passenger type (A=Adult etc.)"
+      - name: pax_name
+        description: "Passenger name as-is from source"
+      - name: dep_stn
+        description: "Origin IATA"
+      - name: arr_stn
+        description: "Destination IATA"
+      - name: flight_num
+        description: "Operating flight number"
+      - name: dep_date
+        description: "Scheduled departure date"
+      - name: booking_sts
+        description: "Segment booking status (HK/OK/HL/XX)"
+      - name: fare_basis
+        description: "Fare basis"
+      - name: tkt_number
+        description: "E-ticket number (if available)"
+
+  - name: sabre_flat_dbt
+    description: "Helper view: parses Sabre CSV row into columns (RAW zone, still source-faithful)"
+    columns:
+      - name: pnr
+        description: "PNR / Record Locator"
+      - name: create_date_utc
+        description: "Booking creation timestamp"
+      - name: passenger_name
+        description: "Passenger name as-is from source"
+      - name: frequent_flyer_number
+        description: "FFP number (if provided)"
+      - name: origin
+        description: "Origin IATA"
+      - name: destination
+        description: "Destination IATA"
+      - name: flight_number
+        description: "Operating flight number"
+      - name: departuredate
+        description: "Scheduled departure date"
+      - name: status
+        description: "Segment booking status"
+      - name: class
+        description: "Cabin/booking class"
+      - name: ticketnumber
+        description: "E-ticket number (if available)"
+
+  - name: vueling_flat_dbt
+    description: "Helper view: flattens Vueling API JSON into passenger × flight rows"
+    columns:
+      - name: booking_reference
+        description: "Booking reference from Vueling API"
+      - name: creation_date
+        description: "Booking creation timestamp"
+      - name: pax_name
+        description: "Passenger name"
+      - name: pax_type
+        description: "Passenger type (adult/child)"
+      - name: dep_stn
+        description: "Origin IATA"
+      - name: arr_stn
+        description: "Destination IATA"
+      - name: flight_num
+        description: "Operating flight number"
+      - name: dep_date
+        description: "Scheduled departure date"
+      - name: currency
+        description: "Booking currency"
+      - name: price_total
+        description: "Total price (booking-level, duplicated per expanded row)"

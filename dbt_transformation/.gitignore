@@ -9,6 +9,22 @@ __pycache__
 data/
 
 # Ignore dbt files
-target/
 dbt_packages/
 logs/
+
+# Ignore all of target by default
+/target/*
+
+# But keep the dbt docs assets for sharing
+!/target/index.html
+!/target/catalog.json
+!/target/manifest.json
+!/target/assets/
+
+# Ignore logs
+/logs/
+/dbt_packages/
+/target/graph.gpickle
+/target/run_results.json
+/target/partial_parse.msgpack
+/target/semantic_manifest.json

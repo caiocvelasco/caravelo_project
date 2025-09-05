@@ -32,12 +32,12 @@ clean-targets:        # directories to be removed by `dbt clean`
 # files using the `{{ config(...) }}` macro.
 models:
   my_dbt_project:             # This must match the `name:` config in the beginning of this document.
-    bronze:                   # This configures models found in 'dbt_2_transformation/models/bronze'
-      +schema: bronze         # This is called 'target schema'. It will override the 'schema:' in profiles.yml
+    raw:                   # This configures models found in 'dbt_2_transformation/models/raw'
+      +schema: raw         # This is called 'target schema'. It will override the 'schema:' in profiles.yml
+      +materialized: 'view'  # Configured to create tables instead of views
+    staging:                   # This configures models found in 'dbt_2_transformation/models/staging'
+      +schema: staging         # This is called 'target schema'. It will override the 'schema:' in profiles.yml        
       +materialized: 'table'  # Configured to create tables instead of views
-    silver:                   # This configures models found in 'dbt_2_transformation/models/silver'
-      +schema: silver         # This is called 'target schema'. It will override the 'schema:' in profiles.yml        
-      +materialized: 'table'  # Configured to create tables instead of views
-    gold:                     # This configures models found in 'dbt_2_transformation/models/gold'
-      +schema: gold           # This is called 'target schema'. It will override the 'schema:' in profiles.yml      
-      +materialized: 'table'  # Configured to create tables instead of views
+    analytics:                     # This configures models found in 'dbt_2_transformation/models/analytics'
+      +schema: analytics           # This is called 'target schema'. It will override the 'schema:' in profiles.yml      
+      +materialized: 'view'  # Configured to create tables instead of views

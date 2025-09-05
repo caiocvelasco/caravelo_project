@@ -1,0 +1,47 @@
+version: 2
+
+models:
+  - name: stg_bookings
+    description: >
+      Canonical bookings at the grain of booking × passenger × flight segment.
+      Unified from Amadeus (CSV), Sabre (CSV), and Vueling (JSON).
+    columns:
+      - name: booking_id
+        description: "PNR / Record Locator / Booking Reference (unified)"
+        tests: [not_null]
+      - name: booking_created_at
+        description: "Creation timestamp from source"
+      - name: passenger_name
+        description: "Passenger name (as-is for STAGING)"
+        tests: [not_null]
+      - name: passenger_type
+        description: "Passenger type where available (e.g., adult/child)"
+      - name: origin
+        description: "Origin IATA"
+        tests: [not_null]
+      - name: destination
+        description: "Destination IATA"
+        tests: [not_null]
+      - name: flight_number
+        description: "Operating flight number"
+        tests: [not_null]
+      - name: departure_date
+        description: "Scheduled departure date"
+        tests: [not_null]
+      - name: status
+        description: "Segment status (HK/OK/HL/XX) if provided"
+      - name: fare_basis
+        description: "Fare basis if provided"
+      - name: ticket_number
+        description: "E-ticket number if provided"
+      - name: class
+        description: "Cabin/booking class if provided"
+      - name: currency
+        description: "Currency (present for Vueling)"
+      - name: price_total
+        description: "Total price (present for Vueling; duplicated on expanded rows)"
+      - name: source_system
+        description: "Lineage: Amadeus / Sabre / Vueling"
+        tests: [not_null]
+      - name: loaded_at
+        description: "ETL load timestamp"

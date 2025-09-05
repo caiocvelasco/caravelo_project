@@ -138,32 +138,6 @@ SELECT * FROM CARAVELO_DB.RAW.VUELING_RAW LIMIT 5;
 --   }
 -- ]
 
-
--- =======================================================
--- STEP 8 - Assign Roles to Users (In case you have other users)
--- =======================================================
-
--- GRANT ROLE INGEST_TRANSFORM_ROLE TO USER CAIOSANDBOX01;
--- GRANT ROLE ANALYST_ROLE TO USER ANALYST_USER;
-
--- =======================================================
--- SHOW USERS, ROLES, AND GRANTS (for verification)
--- =======================================================
-
--- List all roles in your Snowflake account
-SHOW ROLES;
-
--- List all users in your Snowflake account
-SHOW USERS;
-
--- Optional: see which roles are granted to a specific user
-SHOW GRANTS TO USER CAIOSANDBOX01;
-
--- Optional: see which privileges each role has
-SHOW GRANTS TO ROLE ANALYST_ROLE;
-SHOW GRANTS TO ROLE INGEST_TRANSFORM_ROLE;
-
-
 -- =======================================================
 -- BUILDING FLATTENED VIEW IN RAW FROM EXTERNAL TABLES
 -- =======================================================
@@ -183,19 +157,73 @@ SELECT
   SPLIT_PART(value:c1::string, ',', 11) AS Tkt_Number
 FROM CARAVELO_DB.RAW.AMADEUS_RAW;
 
+SELECT * FROM CARAVELO_DB.RAW.AMADEUS_FLAT;
+-- RECORD_LOCATOR	CREATION_DATE	PAX_TYPE	PAX_NAME	DEP_STN	ARR_STN	FLIGHT_NUM	DEP_DATE	BOOKING_STS	FARE_BASIS	TKT_NUMBER
+-- SAFPFF	2025-01-30 22:15:00.000	A	URB MILLANIONSHIRS MR	JED	DOH	QR1189	2025-01-30	HK	VJR3R1SQ	1572121634985
+-- WADTAS	2024-06-10 09:00:00.000	A	URB MILLANIONSHIPS MR	YYC	MSP	WS6340	2024-06-19	OK	KO7D02EK	8382187552509
+-- 1AEPTX	2024-07-01 11:30:00.000	A	MSR SUZANNE LEE	MAD	CDG	IB1234	2024-07-15	HL	ECO123	9988776655443
+
+-----------------------------------------------------------------------------
+
 CREATE OR REPLACE VIEW CARAVELO_DB.RAW.SABRE_FLAT AS
 SELECT
-  SPLIT_PART(value:c1::string, ',', 1) AS PNR,
+  SPLIT_PART(value:c1::string, ',', 1)  AS PNR,
   TO_TIMESTAMP_NTZ(SPLIT_PART(value:c1::string, ',', 2)) AS Create_Date_UTC,
-  SPLIT_PART(value:c1::string, ',', 3) AS Passenger_Name,
-  SPLIT_PART(value:c1::string, ',', 4) AS Frequent_Flyer_Number,
-  SPLIT_PART(value:c1::string, ',', 5) AS Origin,
-  SPLIT_PART(value:c1::string, ',', 6) AS Destination,
-  SPLIT_PART(value:c1::string, ',', 7) AS Flight_Number,
+  SPLIT_PART(value:c1::string, ',', 3)  AS Passenger_Name,
+  SPLIT_PART(value:c1::string, ',', 4)  AS Frequent_Flyer_Number,
+  SPLIT_PART(value:c1::string, ',', 5)  AS Origin,
+  SPLIT_PART(value:c1::string, ',', 6)  AS Destination,
+  SPLIT_PART(value:c1::string, ',', 7)  AS Flight_Number,
   TO_DATE(SPLIT_PART(value:c1::string, ',', 8)) AS DepartureDate,
-  SPLIT_PART(value:c1::string, ',', 9) AS Status,
-  SPLIT_PART(value:c1::string, ',', 10) AS TicketNumber
+  SPLIT_PART(value:c1::string, ',', 9)  AS Status,
+  SPLIT_PART(value:c1::string, ',', 10) AS Class,
+  SPLIT_PART(value:c1::string, ',', 11) AS TicketNumber
 FROM CARAVELO_DB.RAW.SABRE_RAW;
+
+SELECT * FROM CARAVELO_DB.RAW.SABRE_FLAT;
+-- PNR	CREATE_DATE_UTC	PASSENGER_NAME	FREQUENT_FLYER_NUMBER	ORIGIN	DESTINATION	FLIGHT_NUMBER	DEPARTUREDATE	STATUS	CLASS	TICKETNUMBER
+-- ABC123	2026-01-27 18:30:00.000	MADRID OCTUBRE	LY123456	MAD	SCL	LA705	2026-01-27	OK	ECONOMY	0452161785032
+-- DEF456	2024-12-20 14:22:01.000	JOHN SMITH	BA789012	LHR	JFK	BA178	2024-12-24	HK	PREMIUM_ECONOMY	
+-- DEF456	2024-12-20 14:22:01.000	JANE SMITH	BA789013	LHR	JFK	BA178	2024-12-24	HK	PREMIUM_ECONOMY	
+-- GHI789	2024-10-05 08:15:47.000	ALICE DOE		CDG	MIA	AF123	2024-10-20	XX	ECONOMY	1122334455667
+
+-----------------------------------------------------------------------------
+
+CREATE OR REPLACE VIEW CARAVELO_DB.RAW.VUELING_FLAT AS
+SELECT
+  b.value:booking_reference::string AS Booking_Reference,
+  b.value:created_at::timestamp_ntz AS Creation_Date,
+  p.value:name::string AS Pax_Name,
+  p.value:type::string AS Pax_Type,
+  f.value:origin::string AS Dep_Stn,
+  f.value:destination::string AS Arr_Stn,
+  f.value:flight_number::string AS Flight_Num,
+  f.value:departure_date::date AS Dep_Date,
+  b.value:price.currency::string AS Currency,
+  b.value:price.total::float AS Price_Total
+FROM CARAVELO_DB.RAW.VUELING_RAW,
+     LATERAL FLATTEN(input => value) b,
+     LATERAL FLATTEN(input => b.value:passengers) p,
+     LATERAL FLATTEN(input => b.value:flights) f;
+
+SELECT * FROM CARAVELO_DB.RAW.VUELING_FLAT;
+-- BOOKING_REFERENCE	CREATION_DATE	PAX_NAME	PAX_TYPE	DEP_STN	ARR_STN	FLIGHT_NUM	DEP_DATE	CURRENCY	PRICE_TOTAL
+-- ZJ2M8J	2025-02-23 10:15:00.000	Indiana Jones	adult	BCN	SVQ	VY2225	2025-06-21	EUR	1433.88
+-- ZJ2M8J	2025-02-23 10:15:00.000	Indiana Jones	adult	SVQ	BCN	VY2215	2025-06-25	EUR	1433.88
+-- ZJ2M8J	2025-02-23 10:15:00.000	Lindi Jones	child	BCN	SVQ	VY2225	2025-06-21	EUR	1433.88
+-- ZJ2M8J	2025-02-23 10:15:00.000	Lindi Jones	child	SVQ	BCN	VY2215	2025-06-25	EUR	1433.88
+-- 9H7J2K	2024-11-11 09:30:00.000	Angel Cancelo Márquez	adult	SCQ	BCN	FR6333	2016-04-15	EUR	49.99
+-- L1M3N5	2024-08-01 16:45:00.000	Tech Demo User	adult	FRA	LIS	VY7890	2024-09-10	EUR	129.5
+
+-- ==============================================================================================
+-- (OPTIONAL) BUILDING FLATTENED VIEW IN RAW FROM EXTERNAL TABLES VIA DBT EXTERNAL TABLES PACKAGE ()
+-- ==============================================================================================
+
+-- The command was run in dbt: dbt run-operation stage_external_sources
+
+SELECT * FROM CARAVELO_DB.RAW.AMADEUS_RAW_DBT LIMIT 5;
+SELECT * FROM CARAVELO_DB.RAW.SABRE_RAW_DBT LIMIT 5;
+SELECT * FROM CARAVELO_DB.RAW.VUELING_RAW_DBT LIMIT 5;
 
 
 

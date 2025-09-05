@@ -28,6 +28,7 @@ CREATE ROLE IF NOT EXISTS ANALYST_ROLE;
 -- STEP 3 - Grant Privileges
 -- =======================================================
 
+-- Engineer role:
 GRANT USAGE ON DATABASE CARAVELO_DB TO ROLE INGEST_TRANSFORM_ROLE;
 GRANT USAGE ON SCHEMA CARAVELO_DB.RAW TO ROLE INGEST_TRANSFORM_ROLE;
 GRANT USAGE ON SCHEMA CARAVELO_DB.STAGING TO ROLE INGEST_TRANSFORM_ROLE;
@@ -58,6 +59,13 @@ GRANT SELECT ON ALL TABLES IN SCHEMA CARAVELO_DB.ANALYTICS TO ROLE ANALYST_ROLE;
 
 GRANT SELECT ON FUTURE TABLES IN SCHEMA CARAVELO_DB.STAGING TO ROLE ANALYST_ROLE;
 GRANT SELECT ON FUTURE TABLES IN SCHEMA CARAVELO_DB.ANALYTICS TO ROLE ANALYST_ROLE;
+
+-- =======================================================
+-- CRITICAL: Transfer ownership of RAW schema to role
+-- =======================================================
+-- This is essential for dbt run-operation stage_external_sources to work
+-- The role needs ownership to create external tables in the schema
+GRANT OWNERSHIP ON SCHEMA CARAVELO_DB.RAW TO ROLE INGEST_TRANSFORM_ROLE REVOKE CURRENT GRANTS;
 
 -- =======================================================
 -- STEP 4 - Storage Integration with S3

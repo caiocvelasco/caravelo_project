@@ -1,0 +1,20 @@
+version: 2
+
+models:
+  - name: vw_bookings_summary
+    description: >
+      Route-level summary by source system with segments, bookings, and passengers
+      (segments ≈ seats sold on this leg).
+    columns:
+      - name: source_system
+        description: "Data origin (Amadeus / Sabre / Vueling)."
+      - name: origin
+        description: "Route origin IATA."
+      - name: destination
+        description: "Route destination IATA."
+      - name: segments
+        description: "Count of passenger-flight rows (think 'seats sold on this leg')."
+      - name: bookings
+        description: "Distinct booking IDs (PNRs / Record Locators)."
+      - name: passengers
+        description: "Distinct passenger names (proxy for passenger count)."

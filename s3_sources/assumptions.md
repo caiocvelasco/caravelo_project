@@ -6,7 +6,16 @@ This guide explains the structure of the three source files we created to mimic 
 
 The structure and field names in the three source files (amadeus_pss_bookings.csv, sabre_pss_bookings.csv, vueling_api_bookings.json) are directly inspired by the variations observed in the five provided PDF samples. This mapping validates our approach to the core problem.
 
-## The Core Complexity: Bookings vs. Passengers
+The fields and structures in the synthetic CSV and JSON files **were not invented arbitrarily**. Each was abstracted directly **from the real PDF samples provided**. 
+
+For example:
+- I saw “Fare Basis” and “Booking Status” in the WestJet and Qatar receipts,
+- “PNR” and “Passenger Names” in the LATAM boarding passes,
+- and nested passengers in the Vueling receipt. 
+
+Our files simply re-express these real-world elements so that we can test ingestion and normalization pipelines. This demonstrates an awareness of how actual airline data flows differ by system type (legacy PSS vs. modern API) and keeps the project aligned with the integration challenges Caravelo described.
+
+## The Interesting Complexity: Bookings vs. Passengers
 
 A single booking (identified by a PNR or Record Locator) can contain multiple passengers. The source systems represent this relationship in fundamentally different ways, which is the central problem our data model must solve.
 
