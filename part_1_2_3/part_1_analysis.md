@@ -116,11 +116,10 @@ ANALYTICS Layer:
 
 ## Layer 1: RAW (Bronze) - Data Ingestion
 
-### External Table Setup
-The RAW layer leverages Snowflake's External Tables feature to directly query data from S3 without loading it into Snowflake storage:
+The RAW layer uses Snowflake External Tables to query data directly from S3 without storage costs:
 
 ```sql
--- External table configuration
+-- External table with schema inference
 CREATE EXTERNAL TABLE CARAVELO_DB.RAW.amadeus_raw_dbt (
     c1 TEXT as ((case when is_null_value(value:c1) or lower(value:c1) = 'null' then null else value:c1 end)::TEXT))
     location = @CARAVELO_DB.RAW.CSV_STAGE
@@ -128,65 +127,28 @@ CREATE EXTERNAL TABLE CARAVELO_DB.RAW.amadeus_raw_dbt (
 );
 ```
 
-### Key Features:
-- **Schema Inference**: Automatically detects data types from S3 files
-- **Real-time Access**: Queries data directly from S3 without copying
-- **Cost Efficiency**: No storage costs in Snowflake for raw data
-- **Multi-format Support**: Handles both JSON and CSV files
-
-### Data Sources Processed:
-1. **Amadeus**: CSV format with structured booking data
-2. **Sabre**: JSON format with nested passenger information
-3. **Vueling**: JSON format with complex multi-segment bookings
+**Data Sources**: Amadeus (CSV), Sabre (JSON), Vueling (JSON) with automatic schema inference and real-time S3 access.
 
 ## Layer 2: STAGING (Silver) - Data Normalization
 
-### Transformation Logic
-The STAGING layer normalizes disparate data formats into a consistent schema:
+The STAGING layer unifies three different data formats into a consistent **passenger × segment** grain:
 
-#### Key Transformations:
+### Key Transformations:
+- **JSON Flattening**: Extract nested passenger arrays from Sabre/Vueling
+- **Schema Unification**: Map different field names to standard schema
+- **Data Standardization**: Consistent dates, currencies, and text formatting
 
-1. **JSON Flattening** (Sabre & Vueling):
-   ```sql
-   -- Extract nested passenger data
-   passengers.value:name::STRING as passenger_name,
-   passengers.value:age::INTEGER as passenger_age,
-   passengers.value:type::STRING as passenger_type
-   ```
-
-2. **Data Type Standardization**:
-   - Convert all dates to consistent format
-   - Standardize currency fields
-   - Normalize text fields (trim, case handling)
-
-3. **Schema Unification**:
-   - Create common column structure across all sources
-   - Map different field names to standard schema
-   - Add source system identifiers
-
-#### Staging Model Structure:
 ```sql
--- stg_bookings.sql
+-- Unified staging model structure
 SELECT
-    source_system,
-    booking_reference,
-    origin,
-    destination,
-    passenger_name,
-    passenger_age,
-    passenger_type,
-    segment_number,
-    flight_date,
-    -- Additional normalized fields
+    source_system, booking_reference, origin, destination,
+    passenger_name, passenger_type, segment_number, flight_date
 FROM {{ source('raw', 'amadeus_raw_dbt') }}
--- UNION ALL with other sources
+UNION ALL
+-- Additional sources with same schema
 ```
 
-### Data Quality Improvements:
-- **Null Handling**: Consistent null value processing
-- **Data Validation**: Type checking and format validation
-- **Deduplication**: Remove duplicate records
-- **Error Handling**: Graceful handling of malformed data
+**Data Quality**: Null handling, type validation, deduplication, and error handling ensure clean, consistent data.
 
 ## Layer 3: ANALYTICS (Gold) - Business Intelligence
 
@@ -247,27 +209,7 @@ This transformation is crucial for:
 - **Data Quality**: Ensures referential integrity in analytical models
 
 ### Business Views
-The ANALYTICS layer creates business-ready views for analysis:
-
-#### Key Metrics Calculated:
-
-1. **Booking Metrics**:
-   - Total bookings per route
-   - Passenger count per booking
-   - Segment count per booking
-
-2. **Route Analysis**:
-   - Origin-destination pairs
-   - Multi-segment journey tracking
-   - Round-trip identification
-
-3. **Passenger Demographics**:
-   - Adult vs. child passenger counts
-   - Age distribution analysis
-
-### Sample Output Analysis
-
-The `VW_BOOKINGS_SUMMARY` view produces the following insights:
+The `VW_BOOKINGS_SUMMARY` view provides key metrics at the route level:
 
 | SOURCE_SYSTEM | ORIGIN | DESTINATION | SEGMENTS | BOOKINGS | PASSENGERS |
 |---------------|--------|-------------|----------|----------|------------|
@@ -275,115 +217,70 @@ The `VW_BOOKINGS_SUMMARY` view produces the following insights:
 | Vueling | BCN | SVQ | 2 | 1 | 2 |
 | Sabre | LHR | JFK | 2 | 1 | 2 |
 
-#### Business Interpretation:
+**Business Insights**:
+- **Amadeus**: Single-passenger PNRs (1 booking = 1 passenger)
+- **Sabre**: Multi-passenger bookings (1 booking = 2 passengers)  
+- **Vueling**: Complex round-trips (multiple segments, multiple passengers)
 
-**Amadeus (Single Passenger Bookings)**:
-- YYC → MSP: 1 segment, 1 booking, 1 passenger
-- JED → DOH: 1 segment, 1 booking, 1 passenger
-- MAD → CDG: 1 segment, 1 booking, 1 passenger
+This demonstrates successful normalization across different booking systems into a unified analytical grain.
 
-*These represent classic single-passenger PNRs typical of Amadeus system.*
+## Technical Implementation
 
-**Sabre (Multi-Passenger Bookings)**:
-- LHR → JFK: 2 segments, 1 booking, 2 passengers
-- *Demonstrates successful handling of multi-passenger bookings in the same PNR*
-
-**Vueling (Complex Round-trip Bookings)**:
-- BCN → SVQ: 2 segments, 1 booking, 2 passengers
-- SVQ → BCN: 2 segments, 1 booking, 2 passengers
-- *Shows round-trip booking normalization with multiple passengers*
-
-## Technical Implementation Details
-
-### dbt Configuration
-
-#### Project Structure:
+### dbt Project Structure
 ```
 dbt_transformation/
-├── models/
-│   ├── raw/           # External table definitions
-│   ├── staging/       # Normalized data models
-│   └── analytics/     # Business views
+├── models/raw/        # External table definitions
+├── models/staging/    # Normalized data models  
+├── models/analytics/  # Business views & dimensions
 ├── macros/            # Reusable SQL functions
-└── tests/             # Data quality tests
+└── tests/             # Data quality validation
 ```
 
-#### Key dbt Features Used:
-- **Sources**: Define external tables as sources
-- **Refs**: Model dependencies and lineage
-- **Macros**: Reusable transformation logic
-- **Tests**: Data quality validation
-- **Packages**: External table management
+### Pipeline Execution
+```bash
+# Setup and run pipeline
+source .venv/Scripts/activate
+dbt deps                                    # Install packages
+dbt run-operation stage_external_sources   # Create external tables
+dbt run                                     # Run transformations
+dbt test                                    # Validate data quality
+```
 
-## Data Quality & Validation
+**Materialization Strategy**: External tables (RAW) → Tables (STAGING) → Views (ANALYTICS)
 
-### Implemented Tests:
-- **Uniqueness**: Ensure booking references are unique
-- **Not Null**: Validate critical fields
-- **Referential Integrity**: Check foreign key relationships
-- **Data Type Validation**: Ensure correct data types
-- **Business Rules**: Validate booking logic
+## Data Quality & Business Value
 
-### Error Handling:
-- **Graceful Degradation**: Continue processing despite individual record errors
-- **Error Logging**: Track and report data quality issues
-- **Data Lineage**: Full traceability from source to analytics
+### Data Quality Tests
+- **Not Null Tests**: Critical fields (booking_id, passenger_name, origin, destination, flight_number, departure_date, source_system)
+- **Uniqueness**: Surrogate key (booking_sk) in dim_bookings ensures uniqueness across systems
+- **Data Lineage**: Full traceability from source to analytics with loaded_at timestamps
 
-## Business Value Delivered
+### Business Value Delivered
+- **Unified Analytics**: Cross-system comparison (Amadeus, Sabre, Vueling)
+- **Cost Efficiency**: No data duplication, real-time S3 access
+- **Scalable Architecture**: Clear separation of concerns across layers
+- **Actionable Insights**: Route performance, passenger demographics, trend analysis
 
-### Unified Data Model
-- **Cross-System Analysis**: Compare performance across Amadeus, Sabre, and Vueling
-- **Standardized Metrics**: Consistent booking and passenger counts
-- **Real-time Insights**: Direct querying of S3 data without ETL delays
+## Key Challenges Solved
 
-### Operational Benefits
-- **Cost Efficiency**: No data duplication in Snowflake
-- **Scalability**: Handle growing data volumes without performance degradation
-- **Maintainability**: Clear separation of concerns across layers
-- **Data Governance**: Centralized data quality and validation
-
-### Analytical Capabilities
-- **Route Performance**: Analyze booking patterns by origin-destination
-- **Passenger Demographics**: Understand customer segments
-- **System Comparison**: Compare booking patterns across airline systems
-- **Trend Analysis**: Track booking volumes over time
-
-## Technical Challenges & Solutions
-
-### Challenge 1: Multi-Format Data Sources
-**Problem**: Different JSON structures and CSV formats across systems
-**Solution**: Implemented flexible JSON parsing and schema mapping
-
-### Challenge 2: Complex Nested Data
-**Problem**: Vueling data contains nested passenger arrays and multi-segment bookings
-**Solution**: Used Snowflake's JSON functions to flatten nested structures
-
-### Challenge 3: Data Type Inconsistencies
-**Problem**: Same fields have different types across sources
-**Solution**: Implemented comprehensive data type casting and validation
-
-### Challenge 4: Performance Optimization
-**Problem**: Large datasets from S3 causing slow queries
-**Solution**: Optimized external table queries and implemented efficient materialization strategies
-
-### Scalability Considerations:
-- **Partitioning**: Implement date-based partitioning for large datasets
-- **Caching**: Add query result caching for frequently accessed data
-- **Compression**: Optimize storage and query performance
-- **Monitoring**: Implement comprehensive observability
+| Challenge | Solution |
+|-----------|----------|
+| **Multi-Format Sources** | Flexible JSON parsing and unified schema mapping |
+| **Complex Nested Data** | Snowflake JSON functions for flattening passenger arrays |
+| **Data Type Inconsistencies** | Comprehensive casting and validation framework |
+| **Performance Optimization** | Efficient external table queries and materialization strategies |
 
 ## Conclusion
 
-The 3-layer dbt architecture successfully demonstrates modern data engineering best practices:
+This 3-layer dbt architecture demonstrates modern data engineering best practices:
 
-1. **Separation of Concerns**: Clear boundaries between ingestion, transformation, and analytics
-2. **Data Quality**: Comprehensive validation and error handling
-3. **Performance**: Efficient processing of large, multi-format datasets
-4. **Maintainability**: Well-structured, documented, and testable code
-5. **Business Value**: Actionable insights from unified, clean data
+**Separation of Concerns**: Clear boundaries between ingestion, transformation, and analytics  
+**Data Quality**: Comprehensive validation and error handling  
+**Performance**: Efficient processing of multi-format datasets  
+**Business Value**: Actionable insights from unified, clean data  
 
-The pipeline successfully processes complex airline booking data from three different systems, normalizes it into a consistent schema, and delivers business-ready analytics views. The architecture is scalable, maintainable, and provides a solid foundation for advanced analytics and business intelligence.
+The pipeline successfully normalizes complex airline booking data from three different systems into a consistent schema, delivering business-ready analytics views with full data lineage and quality assurance.
 
 ---
 
-*This analysis demonstrates the successful implementation of a modern data stack using dbt, Snowflake, and S3, showcasing effective data engineering practices and delivering tangible business value through unified, clean, and actionable data.*
+*This analysis showcases effective data engineering practices using dbt, Snowflake, and S3, delivering tangible business value through unified, clean, and actionable data.*
