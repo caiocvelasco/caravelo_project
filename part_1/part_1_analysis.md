@@ -1,5 +1,99 @@
 # Part 1: Data Architecture Analysis - 3-Layer dbt Transformation Pipeline
 
+## 📊 Interactive dbt Documentation
+
+**🔗 [View Live dbt Documentation](https://caiocvelasco.github.io/caravelo_project)**
+
+The complete dbt project documentation is available online, featuring:
+- **Interactive Data Lineage**: Visual representation of data flow through all layers
+- **Model Documentation**: Detailed descriptions of each transformation step
+- **Column Documentation**: Field-level metadata and business definitions
+- **Test Results**: Data quality validation outcomes
+- **Dependency Graph**: Clear visualization of model relationships
+
+*Click the link above to explore the full technical documentation and data lineage.*
+
+---
+
+## Booking Data Model (Conceptual ERD)
+
+```mermaid
+erDiagram
+    BOOKING {
+        string booking_id PK
+        timestamp booking_created_at
+        string source_system
+    }
+
+    PASSENGER {
+        string passenger_id PK
+        string booking_id FK
+        string passenger_name
+        string passenger_type
+    }
+
+    FLIGHT_SEGMENT {
+        string segment_id PK
+        string booking_id FK
+        string origin
+        string destination
+        date departure_date
+        string flight_number
+        string status
+        string fare_basis
+        string class
+        string ticket_number
+        string currency
+        float price_total
+    }
+
+    BOOKING ||--o{ PASSENGER : has
+    BOOKING ||--o{ FLIGHT_SEGMENT : contains
+
+---
+
+### Why this works
+- **Booking** is the central entity (PNR / Record Locator / Booking Reference).  
+- **Passenger** → One booking can have many passengers.  
+- **Flight Segment** → One booking can have many flight segments.  
+- This is consistent with how both PSS (Amadeus/Sabre) and API-style systems (Vueling) structure data.  
+
+---
+
+I normalized the three source formats into a conceptual model with three entities: Booking, Passenger, Flight Segment. This ensures consistent grain across sources — passenger × segment — and makes it easy to union them into one staging table.”  
+
+---
+
+## Source-to-Target Mapping
+
+This table shows how key fields from Amadeus (CSV), Sabre (CSV), and Vueling (JSON) are normalized into the unified `stg_bookings` model at the **passenger × flight segment** grain.
+
+| Target Field      | Amadeus (CSV)         | Sabre (CSV)            | Vueling (JSON)         | Notes |
+|-------------------|-----------------------|-------------------------|-------------------------|-------|
+| `booking_id`      | `Record_Locator`      | `PNR`                  | `booking_reference`     | All represent the PNR / booking reference, though with different naming. |
+| `booking_created_at` | `Creation_Date`   | `Create_Date_UTC`       | `created_at`            | Normalized to UTC timestamp. |
+| `passenger_name`  | `Pax_Name`            | `Passenger_Name`        | `passengers[].name`     | Flattened for Vueling (array of passengers). |
+| `passenger_type`  | `Pax_Type`            | _(not available)_       | `passengers[].type`     | Null when not provided by source. |
+| `origin`          | `Dep_Stn`             | `Origin`                | `flights[].origin`      | Always IATA 3-letter airport code. |
+| `destination`     | `Arr_Stn`             | `Destination`           | `flights[].destination` | Always IATA 3-letter airport code. |
+| `flight_number`   | `Flight_Num`          | `Flight_Number`         | `flights[].flight_number` | Standardized flight number format. |
+| `departure_date`  | `Dep_Date`            | `DepartureDate`         | `flights[].departure_date` | Cast to DATE type. |
+| `status`          | `Booking_Sts`         | `Status`                | _(not available)_       | Null for Vueling API, since it doesn’t expose booking status. |
+| `fare_basis`      | `Fare_Basis`          | _(not available)_       | _(not available)_       | Available only in Amadeus. |
+| `ticket_number`   | `Tkt_Number`          | `TicketNumber`          | _(not available)_       | E-ticket number, not always exposed. |
+| `class`           | _(not available)_     | `Class`                 | _(not available)_       | Cabin class code. |
+| `currency`        | _(not available)_     | _(not available)_       | `price.currency`        | Available only in Vueling. |
+| `price_total`     | _(not available)_     | _(not available)_       | `price.total`           | Available only in Vueling. |
+| `source_system`   | `'Amadeus'`           | `'Sabre'`               | `'Vueling'`             | Added for lineage and debugging. |
+| `loaded_at`       | `CURRENT_TIMESTAMP`   | `CURRENT_TIMESTAMP`     | `CURRENT_TIMESTAMP`     | Technical metadata (ETL audit). |
+
+---
+
+### Key Points
+- Not every field exists in every system — we standardize to a superset and allow `NULL` where unavailable.  
+- This creates **schema consistency** across very different booking sources.  
+- Downstream analytics always query the **same set of fields** regardless of source.  
+
 ## Executive Summary
 
 This analysis documents the implementation of a robust 3-layer data architecture using dbt (data build tool) to process multi-source airline booking data from S3 into Snowflake. The pipeline successfully transforms raw JSON/CSV data from three different airline systems (Amadeus, Sabre, Vueling) into a unified analytical layer, demonstrating effective data engineering practices and normalization techniques.
