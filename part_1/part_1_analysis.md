@@ -49,7 +49,7 @@ erDiagram
 
     BOOKING ||--o{ PASSENGER : has
     BOOKING ||--o{ FLIGHT_SEGMENT : contains
-
+```
 ---
 
 ### Why this works
