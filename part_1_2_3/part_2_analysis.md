@@ -271,7 +271,7 @@ Imagine two versions of the catalog:
 
 ---
 
-## 7) (Optional) Architecture Diagram
+## 7) Architecture Diagram
 
 ```mermaid
 flowchart TD
@@ -316,7 +316,7 @@ This lean demo shows the full lifecycle:
 
 It proves that Caravelo’s analytics gap can be closed without overengineering, while leaving room for a future AWS-native automation layer.
 
-## 9) Next Steps — Production Hardening
+## 9) Next Steps — Production Setup
 
 The demo solution is intentionally lean for the interview.  
 In a **production setup**, Caravelo could extend it as follows:
