@@ -18,3 +18,15 @@ models:
         description: "Distinct booking IDs (PNRs / Record Locators)."
       - name: passengers
         description: "Distinct passenger names (proxy for passenger count)."
+  - name: dim_bookings
+    description: "One row per booking (deduped across sources), with counts and metadata."
+    columns:
+      - name: booking_sk
+        description: "Surrogate key = md5(source_system || '|' || booking_id)."
+        tests: [not_null, unique]     # <— primary integrity tests
+      - name: booking_id
+        description: "Natural booking reference from source."
+        tests: [not_null]
+      - name: source_system
+        description: "Originating system (Amadeus / Sabre / Vueling)."
+        tests: [not_null]

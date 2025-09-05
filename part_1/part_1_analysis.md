@@ -109,7 +109,9 @@ RAW Helper Views: amadeus_flat / sabre_flat / vueling_flat
     ↓ (dbt transformations)
 STAGING.STG.BOOKINGS: Unified Canonical Model - Cleaned & normalized data
     ↓ (dbt transformations)
-ANALYTICS Views: vw_bookings_summary - Business-ready views
+ANALYTICS Layer:
+├── DIM_BOOKINGS: Master dimension table (one record per booking)
+└── VW_BOOKINGS_SUMMARY: Business-ready views
 ```
 
 ## Layer 1: RAW (Bronze) - Data Ingestion
@@ -187,6 +189,62 @@ FROM {{ source('raw', 'amadeus_raw_dbt') }}
 - **Error Handling**: Graceful handling of malformed data
 
 ## Layer 3: ANALYTICS (Gold) - Business Intelligence
+
+### Dimension Tables
+The ANALYTICS layer includes both dimension tables and business views for comprehensive analysis:
+
+#### `dim_bookings` - Booking Dimension Table
+
+The `dim_bookings` table serves as a **master dimension** that provides a single source of truth for booking-level information across all source systems:
+
+```sql
+-- Key features of dim_bookings
+SELECT
+    booking_id,                    -- Natural key (PNR/Record Locator)
+    source_system,                 -- Source system identifier
+    MD5(source_system || '|' || booking_id) AS booking_sk,  -- Surrogate key
+    booking_created_at,            -- Earliest creation timestamp
+    any_origin,                    -- Sample origin for BI labels
+    any_destination               -- Sample destination for BI labels
+FROM {{ ref('stg_bookings') }}
+GROUP BY booking_id, source_system
+```
+
+#### Why This Dimension Table Matters:
+
+1. **Deduplication**: Groups multiple passenger/segment records into single booking records
+2. **Cross-System Uniqueness**: Uses surrogate key to ensure uniqueness across different source systems
+3. **Business Intelligence**: Provides clean booking-level metrics for dashboards
+4. **Data Quality**: Ensures one booking = one record, regardless of passenger count
+
+#### Key Design Decisions:
+
+- **Surrogate Key**: `MD5(source_system || '|' || booking_id)` ensures uniqueness across systems
+- **Aggregation**: Uses `MIN(booking_created_at)` to get the earliest creation time
+- **Sample Attributes**: `ANY_VALUE()` for origin/destination provides representative values for BI labels
+- **Grain**: One record per unique booking across all source systems
+
+#### Data Flow: Staging → Dimension
+
+The `dim_bookings` table transforms the **passenger × segment** grain from `stg_bookings` into a **booking** grain:
+
+```
+stg_bookings (passenger × segment grain):
+├── Booking ABC123, Passenger John, Segment 1
+├── Booking ABC123, Passenger Jane, Segment 1  
+├── Booking ABC123, Passenger John, Segment 2
+└── Booking ABC123, Passenger Jane, Segment 2
+
+↓ (GROUP BY booking_id, source_system)
+
+dim_bookings (booking grain):
+└── Booking ABC123 (1 record with aggregated attributes)
+```
+
+This transformation is crucial for:
+- **Dashboard Metrics**: Clean booking counts without double-counting passengers
+- **Business Intelligence**: Proper KPI calculations at the booking level
+- **Data Quality**: Ensures referential integrity in analytical models
 
 ### Business Views
 The ANALYTICS layer creates business-ready views for analysis:
